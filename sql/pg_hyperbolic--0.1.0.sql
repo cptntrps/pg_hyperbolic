@@ -86,3 +86,26 @@ CREATE FUNCTION hyp_dist_to_geodesic(vector, vector, vector) RETURNS float8
 -- Ideal boundary direction: normalize to unit sphere
 CREATE FUNCTION hyp_ideal_direction(vector) RETURNS vector
     AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- ============================================================
+-- Phase 3: Hyperbolic centroid aggregate
+-- ============================================================
+
+-- Internal transition/final/combine functions
+CREATE FUNCTION hyp_centroid_sfunc(float8[], vector) RETURNS float8[]
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE PARALLEL SAFE;
+
+CREATE FUNCTION hyp_centroid_ffunc(float8[]) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE PARALLEL SAFE;
+
+CREATE FUNCTION hyp_centroid_combinefunc(float8[], float8[]) RETURNS float8[]
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE PARALLEL SAFE;
+
+-- Einstein midpoint aggregate: computes hyperbolic centroid via Klein model
+CREATE AGGREGATE hyp_centroid(vector) (
+    SFUNC = hyp_centroid_sfunc,
+    STYPE = float8[],
+    FINALFUNC = hyp_centroid_ffunc,
+    COMBINEFUNC = hyp_centroid_combinefunc,
+    PARALLEL = SAFE
+);
