@@ -39,6 +39,13 @@ CREATE FUNCTION hyp_project(vector) RETURNS vector
 CREATE FUNCTION hyp_check_ball(vector) RETURNS boolean
     AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
 
+-- Map Euclidean vector into Poincaré ball: exp_0(v) = tanh(||v||·scale/2)·v/||v||
+CREATE FUNCTION hyp_from_euclidean(vector) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+CREATE FUNCTION hyp_from_euclidean(vector, float8) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
 -- ============================================================
 -- Phase 2: Geometric primitives
 -- ============================================================
