@@ -134,3 +134,52 @@ hyp_check_ball(PG_FUNCTION_ARGS)
 	}
 	PG_RETURN_BOOL(norm_sq < 1.0);
 }
+
+/* ============================================================
+ * poincare_distance_lorentz(vector, vector) → float8
+ * Alternative distance via Lorentz (hyperboloid) model.
+ * Converts Poincaré→Lorentz internally, computes Minkowski IP.
+ * No boundary-singular denominator. Transparent to ANN index.
+ * ============================================================ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(poincare_distance_lorentz);
+Datum
+poincare_distance_lorentz(PG_FUNCTION_ARGS)
+{
+	Vector *a = PG_GETARG_VECTOR_P(0);
+	Vector *b = PG_GETARG_VECTOR_P(1);
+
+	HypCheckDims(a, b);
+
+	PG_RETURN_FLOAT8(LorentzDistance(a->dim, a->x, b->x));
+}
+
+/* ============================================================
+ * hyp_boundary_epsilon(text) → float8
+ * Returns the recommended boundary stabilization epsilon for a
+ * given storage precision. Adapts POINC_EPS to the precision of
+ * the intermediate arithmetic relative to storage precision.
+ *
+ * Supported: 'float16', 'float32', 'float64'
+ * ============================================================ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(hyp_boundary_epsilon);
+Datum
+hyp_boundary_epsilon(PG_FUNCTION_ARGS)
+{
+	text   *prec = PG_GETARG_TEXT_PP(0);
+	char   *p = text_to_cstring(prec);
+	double  eps;
+
+	if (strcmp(p, "float16") == 0)
+		eps = 1e-3;        /* float16: ~3.3 decimal digits */
+	else if (strcmp(p, "float32") == 0)
+		eps = 1e-7;        /* float32 stored, float64 intermediate */
+	else if (strcmp(p, "float64") == 0)
+		eps = 1e-15;       /* float64 stored, float64 intermediate */
+	else
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("unknown precision: %s (use float16, float32, or float64)", p)));
+
+	pfree(p);
+	PG_RETURN_FLOAT8(eps);
+}

@@ -260,6 +260,55 @@ fn_hyp_midpoint(sqlite3_context *ctx, int argc, sqlite3_value **argv)
 	sqlite3_result_blob(ctx, result, dim_a * sizeof(float), sqlite3_free);
 }
 
+/* poincare_distance_lorentz(blob_a, blob_b) → float
+ * Alternative distance via Lorentz model conversion.
+ * Same result as poincare_distance, different computation path.
+ */
+static void
+fn_poincare_distance_lorentz(sqlite3_context *ctx, int argc, sqlite3_value **argv)
+{
+	const float *a, *b;
+	int dim_a, dim_b, i;
+	double a_sq = 0.0, b_sq = 0.0, ab = 0.0;
+	double a_denom, b_denom, a0, b0, spatial_ip, lorentz_ip;
+
+	a = blob_to_vec(argv[0], &dim_a);
+	b = blob_to_vec(argv[1], &dim_b);
+
+	if (!a || !b)
+	{
+		sqlite3_result_error(ctx, "arguments must be float32 BLOBs", -1);
+		return;
+	}
+	if (dim_a != dim_b)
+	{
+		sqlite3_result_error(ctx, "vectors must have same dimension", -1);
+		return;
+	}
+
+	for (i = 0; i < dim_a; i++)
+	{
+		double ai = (double)a[i];
+		double bi = (double)b[i];
+		a_sq += ai * ai;
+		b_sq += bi * bi;
+		ab   += ai * bi;
+	}
+
+	if (a_sq >= 1.0 - POINC_EPS) a_sq = 1.0 - POINC_EPS;
+	if (b_sq >= 1.0 - POINC_EPS) b_sq = 1.0 - POINC_EPS;
+
+	a_denom = 1.0 - a_sq;
+	b_denom = 1.0 - b_sq;
+
+	a0 = (1.0 + a_sq) / a_denom;
+	b0 = (1.0 + b_sq) / b_denom;
+	spatial_ip = 4.0 * ab / (a_denom * b_denom);
+	lorentz_ip = -a0 * b0 + spatial_ip;
+
+	sqlite3_result_double(ctx, stable_arcosh(-lorentz_ip));
+}
+
 /* vec_from_floats(f1, f2, ...) → blob — helper to create vectors */
 static void
 fn_vec_from_floats(sqlite3_context *ctx, int argc, sqlite3_value **argv)
@@ -306,6 +355,9 @@ sqlite3_hypsqlite_init(sqlite3 *db, char **err, const sqlite3_api_routines *api)
 
 	sqlite3_create_function(db, "hyp_midpoint", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC, 0,
 							fn_hyp_midpoint, 0, 0);
+
+	sqlite3_create_function(db, "poincare_distance_lorentz", 2, SQLITE_UTF8|SQLITE_DETERMINISTIC, 0,
+							fn_poincare_distance_lorentz, 0, 0);
 
 	sqlite3_create_function(db, "vec_from_floats", -1, SQLITE_UTF8|SQLITE_DETERMINISTIC, 0,
 							fn_vec_from_floats, 0, 0);

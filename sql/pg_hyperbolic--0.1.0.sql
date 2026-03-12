@@ -25,6 +25,43 @@ CREATE OPERATOR CLASS vector_poincare_ops
     FUNCTION 1 poincare_distance(vector, vector);
 
 -- ============================================================
+-- Alternative distance: Lorentz (hyperboloid) model
+-- Converts Poincaré→Lorentz internally, uses Minkowski IP.
+-- No boundary-singular denominator. Transparent to ANN index.
+-- ============================================================
+CREATE FUNCTION poincare_distance_lorentz(vector, vector) RETURNS float8
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- Operator: <~> via Lorentz model (same symbol, different function)
+-- Users choose which operator class to use at index creation time.
+CREATE OPERATOR <%> (
+    LEFTARG = vector, RIGHTARG = vector,
+    PROCEDURE = poincare_distance_lorentz,
+    COMMUTATOR = '<%>'
+);
+
+-- HNSW Operator Class (Lorentz model distance)
+CREATE OPERATOR CLASS vector_lorentz_ops
+    FOR TYPE vector USING hnsw AS
+    OPERATOR 1 <%> (vector, vector) FOR ORDER BY float_ops,
+    FUNCTION 1 poincare_distance_lorentz(vector, vector);
+
+-- ============================================================
+-- IVFFlat Operator Classes
+-- Same distance functions, registered for IVFFlat index method.
+-- Centroid computation uses the hyp_centroid aggregate.
+-- ============================================================
+CREATE OPERATOR CLASS vector_poincare_ivfflat_ops
+    FOR TYPE vector USING ivfflat AS
+    OPERATOR 1 <~> (vector, vector) FOR ORDER BY float_ops,
+    FUNCTION 1 poincare_distance(vector, vector);
+
+CREATE OPERATOR CLASS vector_lorentz_ivfflat_ops
+    FOR TYPE vector USING ivfflat AS
+    OPERATOR 1 <%> (vector, vector) FOR ORDER BY float_ops,
+    FUNCTION 1 poincare_distance_lorentz(vector, vector);
+
+-- ============================================================
 -- Utility functions
 -- ============================================================
 CREATE FUNCTION poincare_norm(vector) RETURNS float8
@@ -153,4 +190,11 @@ CREATE FUNCTION hyp_project_c(vector, float8) RETURNS vector
 
 -- Geodesic interpolation with variable curvature
 CREATE FUNCTION hyp_lerp_c(vector, vector, float8, float8) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- ============================================================
+-- Precision-adaptive boundary epsilon
+-- Returns the recommended POINC_EPS for a given storage precision.
+-- ============================================================
+CREATE FUNCTION hyp_boundary_epsilon(text) RETURNS float8
     AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;

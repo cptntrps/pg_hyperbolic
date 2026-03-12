@@ -150,6 +150,59 @@ PoincareBallDistance(int dim, float *ax, float *bx)
 }
 
 /* ============================================================
+ * Lorentz (hyperboloid) model distance.
+ * Converts Poincaré ball points to Lorentz coordinates on the fly.
+ * d(u,v) = arcosh(-⟨u,v⟩_L) where ⟨u,v⟩_L = -u0·v0 + Σ ui·vi
+ *
+ * Advantages: no boundary-singular denominator, single reduction loop,
+ * simpler arcosh argument (always ≥ 1 for valid points).
+ * ============================================================ */
+static inline double
+LorentzDistance(int dim, float *ax, float *bx)
+{
+	double a_sq = 0.0, b_sq = 0.0, ab = 0.0;
+	double a_denom, b_denom;
+	double a0, b0, spatial_ip, lorentz_ip;
+	int i;
+
+	for (i = 0; i < dim; i++)
+	{
+		double ai = (double) ax[i];
+		double bi = (double) bx[i];
+		a_sq += ai * ai;
+		b_sq += bi * bi;
+		ab   += ai * bi;
+	}
+
+	/* Clamp norms for boundary stability */
+	if (a_sq >= 1.0 - POINC_EPS)
+		a_sq = 1.0 - POINC_EPS;
+	if (b_sq >= 1.0 - POINC_EPS)
+		b_sq = 1.0 - POINC_EPS;
+
+	/* Poincaré → Lorentz conversion:
+	 *   x0 = (1 + ||p||²) / (1 - ||p||²)
+	 *   xi = 2·pi / (1 - ||p||²)
+	 */
+	a_denom = 1.0 - a_sq;
+	b_denom = 1.0 - b_sq;
+
+	a0 = (1.0 + a_sq) / a_denom;
+	b0 = (1.0 + b_sq) / b_denom;
+
+	/* Spatial inner product in Lorentz coords:
+	 * Σ (2·ai/a_denom)·(2·bi/b_denom) = 4·ab / (a_denom·b_denom)
+	 */
+	spatial_ip = 4.0 * ab / (a_denom * b_denom);
+
+	/* Lorentz inner product: -a0·b0 + spatial_ip */
+	lorentz_ip = -a0 * b0 + spatial_ip;
+
+	/* d = arcosh(-lorentz_ip), and -lorentz_ip ≥ 1 for valid points */
+	return stable_arcosh(-lorentz_ip);
+}
+
+/* ============================================================
  * Variable curvature helpers.
  * Curvature parameter c > 0 means sectional curvature = -c.
  * Ball radius = 1/sqrt(c). For c=1, all reduce to standard formulas.
