@@ -1,0 +1,29 @@
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+
+# PostgreSQL regression test output
+results/
+regression.diffs
+regression.out
+
+# Sample data (not part of extension)
+sample_*.csv
+livingos_schema_reference.sql
+
+# SQLite compiled extension
+sqlite/*.so
+sqlite/*.dylib
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
