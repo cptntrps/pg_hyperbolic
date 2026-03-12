@@ -11,7 +11,10 @@ Native hyperbolic (Poincaré ball) distance extension for PostgreSQL — either 
 - geoopt (reference implementation for numerical patterns)
 
 ## Quick Start
-- TBD — project in research phase
+- Build: `make` (inside Postgres container with pg_config in PATH)
+- Install: `make install`
+- Enable: `CREATE EXTENSION pg_hyperbolic;` (requires pgvector)
+- Full implementation plan: `PLAN.md`
 
 ## Architecture
 - `research/` — taskforce research reports (01-05)
@@ -36,4 +39,4 @@ Native hyperbolic (Poincaré ball) distance extension for PostgreSQL — either 
 - Real-world validation against LivingOS knowledge graph (9,463 nodes, 33,622 edges, 5,575 with 32D nav embeddings)
 
 ## Current Phase
-Research — 5 parallel investigations running, results in research/
+Implementation — research complete, 5-phase build plan in PLAN.md. Phase 1 (core distance + HNSW) is next.
