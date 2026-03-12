@@ -104,6 +104,21 @@ hyp_from_euclidean(PG_FUNCTION_ARGS)
 	PG_RETURN_VECTOR_P(result);
 }
 
+/* ============================================================
+ * hyp_conformal_factor(vector) → float8
+ * λ_x = 2 / (1 - ||x||²)
+ * Grows as entity approaches boundary. Used for radius-dependent
+ * threshold scaling (e.g., established entities resist changes more).
+ * ============================================================ */
+FUNCTION_PREFIX PG_FUNCTION_INFO_V1(hyp_conformal_factor);
+Datum
+hyp_conformal_factor(PG_FUNCTION_ARGS)
+{
+	Vector *v = PG_GETARG_VECTOR_P(0);
+
+	PG_RETURN_FLOAT8(hyp_lambda(v->x, v->dim));
+}
+
 FUNCTION_PREFIX PG_FUNCTION_INFO_V1(hyp_check_ball);
 Datum
 hyp_check_ball(PG_FUNCTION_ARGS)
