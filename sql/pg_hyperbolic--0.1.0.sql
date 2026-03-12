@@ -109,3 +109,37 @@ CREATE AGGREGATE hyp_centroid(vector) (
     COMBINEFUNC = hyp_centroid_combinefunc,
     PARALLEL = SAFE
 );
+
+-- ============================================================
+-- Variable curvature operations
+-- Curvature c > 0 means sectional curvature = -c, ball radius = 1/√c.
+-- For c = 1.0, results match the standard (c=1) functions above.
+-- ============================================================
+
+-- Distance with variable curvature
+CREATE FUNCTION poincare_distance_c(vector, vector, float8) RETURNS float8
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- Möbius addition with variable curvature
+CREATE FUNCTION hyp_mobius_add_c(vector, vector, float8) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- Hyperbolic radius with variable curvature
+CREATE FUNCTION hyp_radius_c(vector, float8) RETURNS float8
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- Exponential map with variable curvature
+CREATE FUNCTION hyp_exp_map_c(vector, vector, float8) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- Logarithmic map with variable curvature
+CREATE FUNCTION hyp_log_map_c(vector, vector, float8) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- Project to ball of radius 1/√c
+CREATE FUNCTION hyp_project_c(vector, float8) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;
+
+-- Geodesic interpolation with variable curvature
+CREATE FUNCTION hyp_lerp_c(vector, vector, float8, float8) RETURNS vector
+    AS 'MODULE_PATHNAME' LANGUAGE C IMMUTABLE STRICT PARALLEL SAFE;

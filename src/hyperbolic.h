@@ -149,4 +149,103 @@ PoincareBallDistance(int dim, float *ax, float *bx)
 	return stable_arcosh(arg);
 }
 
+/* ============================================================
+ * Variable curvature helpers.
+ * Curvature parameter c > 0 means sectional curvature = -c.
+ * Ball radius = 1/sqrt(c). For c=1, all reduce to standard formulas.
+ * ============================================================ */
+
+/* Default curvature */
+#define HYP_DEFAULT_C  1.0
+
+/* Project to ball of radius 1/sqrt(c) */
+static inline void
+project_to_ball_c(float *x, int dim, double c)
+{
+	double norm_sq = 0.0;
+	double max_r, max_r_sq, scale;
+	int i;
+
+	for (i = 0; i < dim; i++)
+	{
+		double xi = (double) x[i];
+		norm_sq += xi * xi;
+	}
+
+	max_r = (1.0 / sqrt(c)) - POINC_EPS;
+	max_r_sq = max_r * max_r;
+	if (norm_sq > max_r_sq)
+	{
+		scale = max_r / sqrt(norm_sq);
+		for (i = 0; i < dim; i++)
+			x[i] = (float)((double) x[i] * scale);
+	}
+}
+
+/* Conformal factor: λ_x^c = 2 / (1 - c·||x||²) */
+static inline double
+hyp_lambda_c(float *x, int dim, double c)
+{
+	double nsq = hyp_norm_sq(x, dim);
+	double denom;
+
+	denom = 1.0 - c * nsq;
+	if (denom < POINC_EPS)
+		denom = POINC_EPS;
+	return 2.0 / denom;
+}
+
+/* Poincaré distance with curvature:
+ * d_c(x,y) = (1/√c) · arcosh(1 + 2c·||x-y||² / ((1-c||x||²)(1-c||y||²)))
+ */
+static inline double
+PoincareBallDistance_c(int dim, float *ax, float *bx, double c)
+{
+	double x_sq = 0.0, y_sq = 0.0, diff_sq = 0.0;
+	double denom_x, denom_y, arg;
+	int i;
+
+	for (i = 0; i < dim; i++)
+	{
+		double xi = (double) ax[i];
+		double yi = (double) bx[i];
+		double d  = xi - yi;
+		x_sq    += xi * xi;
+		y_sq    += yi * yi;
+		diff_sq += d * d;
+	}
+
+	denom_x = 1.0 - c * x_sq;
+	denom_y = 1.0 - c * y_sq;
+	if (denom_x < POINC_EPS) denom_x = POINC_EPS;
+	if (denom_y < POINC_EPS) denom_y = POINC_EPS;
+
+	arg = 1.0 + 2.0 * c * diff_sq / (denom_x * denom_y);
+
+	return stable_arcosh(arg) / sqrt(c);
+}
+
+/* Möbius addition with curvature:
+ * x ⊕_c y = ((1+2c<x,y>+c||y||²)x + (1-c||x||²)y) / (1+2c<x,y>+c²||x||²||y||²)
+ */
+static inline void
+mobius_add_c(float *x, float *y, int dim, double c, double *out)
+{
+	double x_sq, y_sq, xy, denom, c1, c2;
+	int i;
+
+	x_sq = hyp_norm_sq(x, dim);
+	y_sq = hyp_norm_sq(y, dim);
+	xy   = hyp_dot(x, y, dim);
+
+	denom = 1.0 + 2.0 * c * xy + c * c * x_sq * y_sq;
+	if (fabs(denom) < 1e-15) denom = 1e-15;
+
+	c1 = 1.0 + 2.0 * c * xy + c * y_sq;
+	c2 = 1.0 - c * x_sq;
+
+	for (i = 0; i < dim; i++)
+		out[i] = (c1 * (double) x[i] + c2 * (double) y[i]) / denom;
+}
+
 #endif /* PG_HYPERBOLIC_H */
