@@ -1,6 +1,6 @@
 EXTENSION = pg_hyperbolic
 MODULE_big = pg_hyperbolic
-OBJS = src/hyperbolic.o
+OBJS = src/hyperbolic.o src/geometric.o
 DATA = sql/pg_hyperbolic--0.1.0.sql
 REGRESS = distance index_hnsw stability
 

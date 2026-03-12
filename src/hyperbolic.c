@@ -1,52 +1,6 @@
 #include "hyperbolic.h"
-#include "varatt.h"
 
 PG_MODULE_MAGIC;
-
-/* Allocate a new Vector (InitVector is not exported by pgvector) */
-static Vector *
-HypInitVector(int dim)
-{
-	Vector *result = (Vector *) palloc0(VECTOR_SIZE(dim));
-
-	SET_VARSIZE(result, VECTOR_SIZE(dim));
-	result->dim = dim;
-	result->unused = 0;
-	return result;
-}
-
-/* ---- Core distance computation ---- */
-
-HYP_TARGET_CLONES
-static double
-PoincareBallDistance(int dim, float *ax, float *bx)
-{
-	double x_sq = 0.0, y_sq = 0.0, diff_sq = 0.0;
-
-	for (int i = 0; i < dim; i++)
-	{
-		double xi = (double) ax[i];
-		double yi = (double) bx[i];
-		double d  = xi - yi;
-		x_sq    += xi * xi;
-		y_sq    += yi * yi;
-		diff_sq += d * d;
-	}
-
-	double denom;
-	double arg;
-
-	/* Clamp norms to ball interior */
-	if (x_sq >= 1.0 - POINC_EPS)
-		x_sq = 1.0 - POINC_EPS;
-	if (y_sq >= 1.0 - POINC_EPS)
-		y_sq = 1.0 - POINC_EPS;
-
-	denom = (1.0 - x_sq) * (1.0 - y_sq);
-	arg   = 1.0 + 2.0 * diff_sq / denom;
-
-	return stable_arcosh(arg);
-}
 
 /* ---- PG-registered functions ---- */
 
@@ -68,8 +22,9 @@ poincare_norm(PG_FUNCTION_ARGS)
 {
 	Vector *v = PG_GETARG_VECTOR_P(0);
 	double  norm_sq = 0.0;
+	int i;
 
-	for (int i = 0; i < v->dim; i++)
+	for (i = 0; i < v->dim; i++)
 	{
 		double xi = (double) v->x[i];
 		norm_sq += xi * xi;
@@ -83,13 +38,14 @@ hyp_radius(PG_FUNCTION_ARGS)
 {
 	Vector *v = PG_GETARG_VECTOR_P(0);
 	double  norm_sq = 0.0;
+	double  norm;
+	int i;
 
-	for (int i = 0; i < v->dim; i++)
+	for (i = 0; i < v->dim; i++)
 	{
 		double xi = (double) v->x[i];
 		norm_sq += xi * xi;
 	}
-	double norm;
 
 	norm = sqrt(norm_sq);
 	if (norm >= 1.0 - POINC_EPS)
@@ -118,8 +74,9 @@ hyp_check_ball(PG_FUNCTION_ARGS)
 {
 	Vector *v = PG_GETARG_VECTOR_P(0);
 	double  norm_sq = 0.0;
+	int i;
 
-	for (int i = 0; i < v->dim; i++)
+	for (i = 0; i < v->dim; i++)
 	{
 		double xi = (double) v->x[i];
 		norm_sq += xi * xi;
