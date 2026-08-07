@@ -39,10 +39,8 @@ sqlite/
   hyp_sqlite.c   — standalone SQLite loadable extension (patent breadth)
 tools/
   train_poincare.py  — Gensim-based Poincaré embedding trainer
-patent/
-  PROVISIONAL_APPLICATION.md  — 13-claim USPTO provisional draft
 research/
-  00-07 research reports (validation, internals, theory, operations, stability, prior art, patent, benchmarks)
+  research reports (validation, internals, theory, operations, stability, benchmarks)
 ```
 
 ## Key Domain Concepts

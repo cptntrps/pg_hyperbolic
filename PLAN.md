@@ -892,7 +892,7 @@ we replicate its definition (it's stable across pgvector minor versions).
 
 **`bench/bench_distance.c`** — standalone C program (not a PG extension):
 - Measures raw throughput: Poincaré vs L2 vs Lorentz at 32D and 768D
-- Uses the same vector data from `sample_nav_vectors.csv`
+- Uses a sample vector dataset (32D Poincaré embeddings)
 - Reports ops/sec and latency percentiles
 
 **`bench/bench_queries.sql`** — SQL benchmarks:
