@@ -229,7 +229,8 @@ fn_hyp_midpoint(sqlite3_context *ctx, int argc, sqlite3_value **argv)
 {
 	const float *a, *b;
 	int dim_a, dim_b, i;
-	double la, lb, la2, lb2, denom, nsq_a, nsq_b;
+	double nsq_a, nsq_b, ga, gb, m_sq = 0.0, back;
+	double *buf;
 	float *result;
 
 	a = blob_to_vec(argv[0], &dim_a);
@@ -246,16 +247,24 @@ fn_hyp_midpoint(sqlite3_context *ctx, int argc, sqlite3_value **argv)
 	if (nsq_a >= 1.0 - POINC_EPS) nsq_a = 1.0 - POINC_EPS;
 	if (nsq_b >= 1.0 - POINC_EPS) nsq_b = 1.0 - POINC_EPS;
 
-	la = 2.0 / (1.0 - nsq_a);
-	lb = 2.0 / (1.0 - nsq_b);
-	la2 = la * la;
-	lb2 = lb * lb;
-	denom = la2 + lb2 - 2.0;
-	if (fabs(denom) < 1e-15) denom = 1e-15;
+	/* Einstein midpoint through the Klein model (same math as the PostgreSQL hyp_midpoint). */
+	ga = 1.0 / sqrt(fmax(1.0 - 4.0 * nsq_a / ((1.0 + nsq_a) * (1.0 + nsq_a)), 1e-300));
+	gb = 1.0 / sqrt(fmax(1.0 - 4.0 * nsq_b / ((1.0 + nsq_b) * (1.0 + nsq_b)), 1e-300));
 
+	buf = (double *)sqlite3_malloc(dim_a * sizeof(double));
 	result = (float *)sqlite3_malloc(dim_a * sizeof(float));
 	for (i = 0; i < dim_a; i++)
-		result[i] = (float)((lb2 * (double)a[i] + la2 * (double)b[i]) / denom);
+	{
+		double ka = 2.0 * (double)a[i] / (1.0 + nsq_a);
+		double kb = 2.0 * (double)b[i] / (1.0 + nsq_b);
+
+		buf[i] = (ga * ka + gb * kb) / (ga + gb);
+		m_sq += buf[i] * buf[i];
+	}
+	back = 1.0 + sqrt(fmax(1.0 - m_sq, 0.0));
+	for (i = 0; i < dim_a; i++)
+		result[i] = (float)(buf[i] / back);
+	sqlite3_free(buf);
 
 	sqlite3_result_blob(ctx, result, dim_a * sizeof(float), sqlite3_free);
 }

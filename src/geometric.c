@@ -81,24 +81,47 @@ FUNCTION_PREFIX PG_FUNCTION_INFO_V1(hyp_midpoint);
 Datum
 hyp_midpoint(PG_FUNCTION_ARGS)
 {
+	/*
+	 * Einstein midpoint through the Klein model, the same math as the
+	 * hyp_centroid aggregate: k = 2x / (1 + |x|^2), gamma = 1 / sqrt(1 - |k|^2),
+	 * m_k = (gamma_a k_a + gamma_b k_b) / (gamma_a + gamma_b), then
+	 * x = m_k / (1 + sqrt(1 - |m_k|^2)).
+	 */
 	Vector *a = PG_GETARG_VECTOR_P(0);
 	Vector *b = PG_GETARG_VECTOR_P(1);
-	double la, lb, la2, lb2, denom;
+	double a_sq = 0.0, b_sq = 0.0, ka_sq, kb_sq, ga, gb, m_sq = 0.0, back;
 	double *buf;
 	int i;
 
 	HypCheckDims(a, b);
 
-	la = hyp_lambda(a->x, a->dim);
-	lb = hyp_lambda(b->x, b->dim);
-	la2 = la * la;
-	lb2 = lb * lb;
-	denom = la2 + lb2 - 2.0;
-	if (fabs(denom) < 1e-15) denom = 1e-15;
+	for (i = 0; i < a->dim; i++)
+	{
+		a_sq += (double) a->x[i] * (double) a->x[i];
+		b_sq += (double) b->x[i] * (double) b->x[i];
+	}
+	if (a_sq >= 1.0 - POINC_EPS)
+		a_sq = 1.0 - POINC_EPS;
+	if (b_sq >= 1.0 - POINC_EPS)
+		b_sq = 1.0 - POINC_EPS;
+
+	ka_sq = 4.0 * a_sq / ((1.0 + a_sq) * (1.0 + a_sq));
+	kb_sq = 4.0 * b_sq / ((1.0 + b_sq) * (1.0 + b_sq));
+	ga = 1.0 / sqrt(fmax(1.0 - ka_sq, 1e-300));
+	gb = 1.0 / sqrt(fmax(1.0 - kb_sq, 1e-300));
 
 	buf = (double *) palloc(sizeof(double) * a->dim);
 	for (i = 0; i < a->dim; i++)
-		buf[i] = (lb2 * (double) a->x[i] + la2 * (double) b->x[i]) / denom;
+	{
+		double ka = 2.0 * (double) a->x[i] / (1.0 + a_sq);
+		double kb = 2.0 * (double) b->x[i] / (1.0 + b_sq);
+
+		buf[i] = (ga * ka + gb * kb) / (ga + gb);
+		m_sq += buf[i] * buf[i];
+	}
+	back = 1.0 + sqrt(fmax(1.0 - m_sq, 0.0));
+	for (i = 0; i < a->dim; i++)
+		buf[i] /= back;
 
 	PG_RETURN_VECTOR_P(doubles_to_vector(buf, a->dim));
 }
