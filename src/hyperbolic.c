@@ -1,4 +1,5 @@
 #include "hyperbolic.h"
+#include "utils/builtins.h"	/* text_to_cstring */
 
 PG_MODULE_MAGIC;
 
