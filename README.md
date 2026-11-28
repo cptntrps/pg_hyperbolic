@@ -138,7 +138,9 @@ src/
   aggregate.c    — Einstein midpoint centroid (Klein model, parallel-safe)
   curvature.c    — variable curvature versions of all operations
 sql/
-  pg_hyperbolic--0.1.0.sql  — CREATE FUNCTION/OPERATOR/AGGREGATE statements
+  pg_hyperbolic--0.1.1.sql  — CREATE FUNCTION/OPERATOR/AGGREGATE statements (default version)
+  pg_hyperbolic--0.1.0.sql  — the 0.1.0 script; its IVFFlat classes lack support function 3
+  pg_hyperbolic--0.1.0--0.1.1.sql, --0.1.1--0.1.0.sql — update and its reversal
 sqlite/
   hyp_sqlite.c   — standalone SQLite loadable extension
 tools/

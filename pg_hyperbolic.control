@@ -1,5 +1,5 @@
 comment = 'Hyperbolic (Poincaré) distance for pgvector HNSW/IVFFlat'
-default_version = '0.1.0'
+default_version = '0.1.1'
 module_pathname = '$libdir/pg_hyperbolic'
 requires = 'vector'
 relocatable = true
